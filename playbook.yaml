@@ -1,0 +1,32 @@
+---
+
+- hosts: localhost
+
+  tasks:
+
+  - name: Stop the running container
+
+    command: docker stop react-app
+
+    ignore_errors: True
+
+
+
+  - name: remove the running container
+
+    command: docker rm react-app
+
+    ignore_errors: True
+
+
+
+  - name: remove the running image
+
+    command: docker rmi esjgroupinc/react-app:latest
+
+    ignore_errors: True
+
+
+  - name: Create and run container
+
+    command: docker run -d -p 3000:80 --name react-app esjgroupinc/react-app
