@@ -22,11 +22,11 @@
 
   - name: remove the running image
 
-    command: docker rmi esjgroupinc/react-app:latest
+    command: docker rmi mahmudhasan/react-app:latest
 
     ignore_errors: True
 
 
   - name: Create and run container
 
-    command: docker run -d -p 3000:80 --name react-app esjgroupinc/react-app
+    command: docker run -d -p 3000:80 --name react-app mahmudhasan/react-app
