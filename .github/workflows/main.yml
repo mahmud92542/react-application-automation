@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       id-token: write
-      contents: write    # This is required for actions/checkout@v2
+      contents: read    # This is required for actions/checkout@v2
 
     steps:
     - name: Checkout
