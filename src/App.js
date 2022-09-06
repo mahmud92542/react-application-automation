@@ -1,5 +1,6 @@
 import logo from './logo.svg';
 import './App.css';
+
 function App() {
   return (
     <div className="App">
@@ -14,8 +15,11 @@ function App() {
           target="_blank"
           rel="noopener noreferrer"
         >
-          Hello ESJ!
           Welcome to AWS Amplify!
         </a>
       </header>
     </div>
+  );
+}
+
+export default App;
