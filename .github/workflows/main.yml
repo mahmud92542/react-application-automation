@@ -26,7 +26,6 @@ jobs:
       id-token: write
       contents: read    # This is required for actions/checkout@v2
     
-
     steps:
     - name: Checkout
       uses: actions/checkout@v2
