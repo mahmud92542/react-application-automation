@@ -7,6 +7,17 @@ on:
 name: React Project `react-application-automation` CI on ECR
 
 jobs:
+  scan:
+    name: gitleaks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+  
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
