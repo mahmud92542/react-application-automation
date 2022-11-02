@@ -14,7 +14,7 @@ function App() {
           target="_blank"
           rel="noopener noreferrer"
         >
-          Hello ESJ!
+          Hello AWS!
           Welcome to AWS Amplify!
         </a>
       </header>
