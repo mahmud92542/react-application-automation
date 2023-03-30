@@ -16,6 +16,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.ACCESS_TOKEN }}
           GITLEAKS_NOTIFY_USER_LIST: ${{ secrets.GITLEAKS_NOTIFY_USER_LIST }}
+      - uses: actions/checkout@v2
+      - name: Run OPA
+        uses: open-policy-agent/github-action@v1
+        with:
+          policy: .dockerfile-security.rego
   
   deploy:
     name: Deploy
