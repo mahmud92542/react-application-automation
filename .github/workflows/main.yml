@@ -18,7 +18,7 @@ jobs:
           GITLEAKS_NOTIFY_USER_LIST: ${{ secrets.GITLEAKS_NOTIFY_USER_LIST }}
       - uses: actions/checkout@v2
       - name: Run OPA
-        uses: open-policy-agent/github-action@v1
+        uses: open-policy-agent/setup-opa@v2
         with:
           policy: .dockerfile-security.rego
   
