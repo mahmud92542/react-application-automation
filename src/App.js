@@ -14,8 +14,7 @@ function App() {
           target="_blank"
           rel="noopener noreferrer"
         >
-          Hello All!
-          Welcome to AWS Amplify!
+          Hello DevOps Batch 5, Welcome to CD class!
         </a>
       </header>
     </div>
