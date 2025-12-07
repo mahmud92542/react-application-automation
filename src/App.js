@@ -14,7 +14,7 @@ function App() {
           target="_blank"
           rel="noopener noreferrer"
         >
-          Hello DevOps Batch 5, Welcome to CD class!
+          Welcome to CD class!
         </a>
       </header>
     </div>
