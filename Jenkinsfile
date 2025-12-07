@@ -38,9 +38,9 @@ pipeline {
 
         stage('Deploy Container') {
             steps {
-                echo 'Starting new container on port 3000...'
+                echo 'Starting new container on port 80...'
                 // Run the new container in detached mode (-d) with the port mapping
-                sh 'docker run -d --name react -p 3000:3000 react'
+                sh 'docker run -d --name react -p 80:80 react'
             }
         }
     }
