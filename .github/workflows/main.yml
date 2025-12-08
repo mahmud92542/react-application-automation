@@ -71,87 +71,55 @@
 
 
 
-name: Production Deployment with Manual Approval
+name: Deploy to DEV
 
 on:
-  workflow_dispatch: # Use manual trigger for final Prod deployment
+  push:
+    branches:
+      - main
+  workflow_dispatch:
 
 jobs:
-  # This job must run first to create the artifact needed by the deploy job.
-  build:
-    runs-on: ubuntu-latest
-    outputs:
-      image_name: ${{ env.IMAGE_NAME }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set Image Name
-        run: echo "IMAGE_NAME=my-app" >> $GITHUB_ENV
-        
-      - name: Build Docker Image
-        run: docker build . -t ${{ env.IMAGE_NAME }}:latest
-        
-      - name: Export Docker Image to TAR
-        run: docker save ${{ env.IMAGE_NAME }}:latest -o ${{ env.IMAGE_NAME }}.tar
-        
-      # FIX: Change file permissions to prevent "Permission denied" error during transfer
-      - name: Fix file permissions for SCP
-        run: chmod 644 ${{ env.IMAGE_NAME }}.tar
-        
-      - name: Upload artifact for deployment
-        uses: actions/upload-artifact@v4
-        with:
-          name: docker-image-artifact
-          path: ${{ env.IMAGE_NAME }}.tar
-
   deploy:
-    # This job will pause until a reviewer approves the 'production' environment protection rule.
-    needs: build
     runs-on: ubuntu-latest
-    environment: DEV # This links the job to the environment with approval rules
-    
+    environment: DEV   # ✅ Manual approval happens here
+
     steps:
-      - name: Download artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: docker-image-artifact
-          
-      - name: Set Image Name
-        # Retrieve the image name from the previous job's output
-        run: echo "IMAGE_NAME=${{ needs.build.outputs.image_name }}" >> $GITHUB_ENV
-
-      # 1. Transfer the image file to the DEV EC2 instance using SCP
-      - name: Transfer Image to PROD EC2
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.PROD_EC2_HOST }}
-          username: ${{ secrets.PROD_EC2_USER }}
-          key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
-          source: "${{ env.IMAGE_NAME }}.tar"
-          target: "/tmp/"
-
-      # 2. Deploy the container on the PROD EC2 instance via SSH
-      - name: Deploy Container to PROD
+      - name: Deploy to DEV EC2
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.PROD_EC2_HOST }}
-          username: ${{ secrets.PROD_EC2_USER }}
-          key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+          host: ${{ secrets.DEV_EC2_HOST }}
+          username: ${{ secrets.DEV_EC2_USER }}
+          key: ${{ secrets.DEV_SSH_PRIVATE_KEY }}
           script: |
-            echo "--- Starting Production Deployment ---"
-            
-            # Load the image
-            sudo docker load -i /tmp/${{ env.IMAGE_NAME }}.tar
-            rm /tmp/${{ env.IMAGE_NAME }}.tar
-            
-            # Stop and run the new container
-            CONTAINER_NAME=prod-${{ env.IMAGE_NAME }}
-            sudo docker stop $CONTAINER_NAME || true
-            sudo docker rm $CONTAINER_NAME || true
-            sudo docker run -d \
+            echo "===== DEPLOYING TO DEV SERVER ====="
+
+            APP_DIR=/home/ubuntu/my-app
+            IMAGE_NAME=my-app
+            CONTAINER_NAME=dev-my-app
+
+            # If app doesn't exist, clone it
+            if [ ! -d "$APP_DIR" ]; then
+              git clone https://github.com/${{ github.repository }}.git $APP_DIR
+            fi
+
+            cd $APP_DIR
+
+            echo "--- Pulling latest code ---"
+            git fetch origin
+            git reset --hard origin/main
+
+            echo "--- Building new Docker image ---"
+            docker build -t $IMAGE_NAME:latest .
+
+            echo "--- Restarting container ---"
+            docker stop $CONTAINER_NAME || true
+            docker rm $CONTAINER_NAME || true
+
+            docker run -d \
               --name $CONTAINER_NAME \
               -p 80:80 \
-              ${{ env.IMAGE_NAME }}:latest
-            
-            echo "--- Production Deployment Finished ---"
+              --restart unless-stopped \
+              $IMAGE_NAME:latest
+
+            echo "===== DEV DEPLOYMENT COMPLETE ====="
