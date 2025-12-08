@@ -14,7 +14,7 @@ function App() {
           target="_blank"
           rel="noopener noreferrer"
         >
-          Hello Interactive Cares!
+          Welcome to CD class!
         </a>
       </header>
     </div>
