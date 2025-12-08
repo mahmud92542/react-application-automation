@@ -14,7 +14,7 @@ function App() {
           target="_blank"
           rel="noopener noreferrer"
         >
-          Hello From Interactive Cares!
+          Hello Interactive Cares!
         </a>
       </header>
     </div>
