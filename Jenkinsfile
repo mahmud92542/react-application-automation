@@ -19,7 +19,7 @@ pipeline {
         stage('Deploy Container'){
             steps{
                 echo 'Starting new container on port 80...'
-                sh 'docker run -d --name react -p 80:80 react'
+                sh 'docker run -d --name react -p 8081:80 react'
             }
         }
     }
