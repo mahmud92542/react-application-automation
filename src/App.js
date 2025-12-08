@@ -14,7 +14,7 @@ function App() {
           target="_blank"
           rel="noopener noreferrer"
         >
-          Welcome to CD class!
+          Hello everyone!
         </a>
       </header>
     </div>
