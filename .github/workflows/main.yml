@@ -71,62 +71,87 @@
 
 
 
-name: Direct Transfer CI/CD to EC2
+name: Production Deployment with Manual Approval
 
 on:
-  workflow_dispatch:
-  push:
-    branches:
-      - main
+  workflow_dispatch: # Use manual trigger for final Prod deployment
 
 jobs:
+  # This job must run first to create the artifact needed by the deploy job.
   build:
     runs-on: ubuntu-latest
+    outputs:
+      image_name: ${{ env.IMAGE_NAME }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 1. Build the Docker image
+      - name: Set Image Name
+        run: echo "IMAGE_NAME=my-app" >> $GITHUB_ENV
+        
       - name: Build Docker Image
-        run: docker build . -t my-app:latest
+        run: docker build . -t ${{ env.IMAGE_NAME }}:latest
         
-      # 2. Save the image to a tar file
       - name: Export Docker Image to TAR
-        run: docker save my-app:latest -o my-app.tar
+        run: docker save ${{ env.IMAGE_NAME }}:latest -o ${{ env.IMAGE_NAME }}.tar
         
-      # 3. Transfer the image file to EC2 using SCP
-      - name: Transfer Image to EC2
-        uses: appleboy/scp-action@v0.1.7
+      # FIX: Change file permissions to prevent "Permission denied" error during transfer
+      - name: Fix file permissions for SCP
+        run: chmod 644 ${{ env.IMAGE_NAME }}.tar
+        
+      - name: Upload artifact for deployment
+        uses: actions/upload-artifact@v4
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "my-app.tar" # The file to send
-          target: "/tmp/" # The location on the EC2 instance
+          name: docker-image-artifact
+          path: ${{ env.IMAGE_NAME }}.tar
 
   deploy:
+    # This job will pause until a reviewer approves the 'production' environment protection rule.
     needs: build
     runs-on: ubuntu-latest
+    environment: DEV # This links the job to the environment with approval rules
+    
     steps:
-      - name: Deploy Container via SSH (Load Image and Run)
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image-artifact
+          
+      - name: Set Image Name
+        # Retrieve the image name from the previous job's output
+        run: echo "IMAGE_NAME=${{ needs.build.outputs.image_name }}" >> $GITHUB_ENV
+
+      # 1. Transfer the image file to the DEV EC2 instance using SCP
+      - name: Transfer Image to PROD EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.PROD_EC2_HOST }}
+          username: ${{ secrets.PROD_EC2_USER }}
+          key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
+          source: "${{ env.IMAGE_NAME }}.tar"
+          target: "/tmp/"
+
+      # 2. Deploy the container on the PROD EC2 instance via SSH
+      - name: Deploy Container to PROD
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          # The script runs on the EC2 instance
+          host: ${{ secrets.PROD_EC2_HOST }}
+          username: ${{ secrets.PROD_EC2_USER }}
+          key: ${{ secrets.PROD_SSH_PRIVATE_KEY }}
           script: |
-            # 1. Load the image from the transferred tar file
-            sudo docker load -i /tmp/my-app.tar
+            echo "--- Starting Production Deployment ---"
             
-            # 2. Clean up the temporary file
-            rm /tmp/my-app.tar
+            # Load the image
+            sudo docker load -i /tmp/${{ env.IMAGE_NAME }}.tar
+            rm /tmp/${{ env.IMAGE_NAME }}.tar
             
-            # 3. Stop and run the new container
-            # Since the image was tagged as my-app:latest during the build, we use that here
-            sudo docker stop my-app-container || true
-            sudo docker rm my-app-container || true
+            # Stop and run the new container
+            CONTAINER_NAME=prod-${{ env.IMAGE_NAME }}
+            sudo docker stop $CONTAINER_NAME || true
+            sudo docker rm $CONTAINER_NAME || true
             sudo docker run -d \
-              --name my-app-container \
-              -p 80:8080 \
-              my-app:latest
+              --name $CONTAINER_NAME \
+              -p 80:80 \
+              ${{ env.IMAGE_NAME }}:latest
+            
+            echo "--- Production Deployment Finished ---"
