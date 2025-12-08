@@ -1,3 +1,166 @@
+name: Deploy to DEV
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Image
+        run: docker build -t my-app:latest .
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: DEV
+
+    steps:
+      - name: Deploy to DEV EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            APP_DIR=/home/ubuntu/my-app
+            IMAGE_NAME=my-app
+            CONTAINER_NAME=dev-my-app
+
+            if [ ! -d "$APP_DIR" ]; then
+              git clone https://github.com/${{ github.repository }}.git $APP_DIR
+            fi
+
+            cd $APP_DIR
+
+            git fetch origin
+            git reset --hard origin/main
+
+            docker build -t $IMAGE_NAME:latest .
+
+            docker stop $CONTAINER_NAME || true
+            docker rm $CONTAINER_NAME || true
+
+            docker run -d \
+              --name $CONTAINER_NAME \
+              -p 80:80 \
+              --restart unless-stopped \
+              $IMAGE_NAME:latest
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#name: Github Actions
 # on:
 #   push:
 #     branches: [ main ]
@@ -67,61 +230,3 @@
 #         echo "Pushing image to ECR..."
 #         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 #         echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
-
-
-
-
-name: Deploy to DEV
-
-on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
-
-jobs:
-  build:
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Build Image (validation only)
-        run: docker build -t my-app:latest .
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment: DEV
-
-    steps:
-      - name: Deploy to DEV EC2
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            APP_DIR=/home/ubuntu/my-app
-            IMAGE_NAME=my-app
-            CONTAINER_NAME=dev-my-app
-
-            if [ ! -d "$APP_DIR" ]; then
-              git clone https://github.com/${{ github.repository }}.git $APP_DIR
-            fi
-
-            cd $APP_DIR
-
-            git fetch origin
-            git reset --hard origin/main
-
-            docker build -t $IMAGE_NAME:latest .
-
-            docker stop $CONTAINER_NAME || true
-            docker rm $CONTAINER_NAME || true
-
-            docker run -d \
-              --name $CONTAINER_NAME \
-              -p 80:80 \
-              --restart unless-stopped \
-              $IMAGE_NAME:latest
