@@ -80,9 +80,19 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
-    environment: DEV   # ✅ Manual approval happens here
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Image (validation only)
+        run: docker build -t my-app:latest .
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: DEV
 
     steps:
       - name: Deploy to DEV EC2
@@ -92,27 +102,21 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            echo "===== DEPLOYING TO DEV SERVER ====="
-
             APP_DIR=/home/ubuntu/my-app
             IMAGE_NAME=my-app
             CONTAINER_NAME=dev-my-app
 
-            # If app doesn't exist, clone it
             if [ ! -d "$APP_DIR" ]; then
               git clone https://github.com/${{ github.repository }}.git $APP_DIR
             fi
 
             cd $APP_DIR
 
-            echo "--- Pulling latest code ---"
             git fetch origin
             git reset --hard origin/main
 
-            echo "--- Building new Docker image ---"
             docker build -t $IMAGE_NAME:latest .
 
-            echo "--- Restarting container ---"
             docker stop $CONTAINER_NAME || true
             docker rm $CONTAINER_NAME || true
 
@@ -121,5 +125,3 @@ jobs:
               -p 80:80 \
               --restart unless-stopped \
               $IMAGE_NAME:latest
-
-            echo "===== DEV DEPLOYMENT COMPLETE ====="
